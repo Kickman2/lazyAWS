@@ -3,6 +3,7 @@ import configparser
 import json
 import os
 import string
+import sys
 from urllib.parse import _DefragResultBase
 from os.path import expanduser
 
@@ -54,7 +55,7 @@ def getconfig(profile):
                 awsConfig["profile " + profile]['output'] = output
                 awsCred[profile]['aws_access_key_id'] = access
                 awsCred[profile]['aws_secret_access_key'] = key
-                awsCred[profile]['aws_session_key_id_main']  = access
+                awsCred[profile]['aws_access_key_id_main']  = access
                 awsCred[profile]['aws_session_access_key_main']     = key
                 with open('%s/.aws/config' % home, 'w') as awsConfigfile:
                     awsConfig.write(awsConfigfile)
@@ -123,13 +124,15 @@ def main():
     parser = argparse.ArgumentParser()
     
     # Adding optional argument
-    parser.add_argument("-n", "--configmfa", help = "Create/update mfa config")
+    parser.add_argument("-n", "--configmfa", help ="Create/update mfa config")
     parser.add_argument("-r", "--renew", help = "Renew mfa access key")
     # Read arguments from command line
     args = parser.parse_args()
-    
+    if len(sys.argv)==1:
+        parser.print_help(sys.stderr)
+        sys.exit(1)
     if args.configmfa:
-        #create new mfa device
+        #create/update new mfa device
         configureMFA(args.configmfa)
     if args.renew:
         #renew mfa token

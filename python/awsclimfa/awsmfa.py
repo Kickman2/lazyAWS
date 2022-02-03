@@ -56,7 +56,7 @@ def getconfig(profile):
                 awsCred[profile]['aws_access_key_id'] = access
                 awsCred[profile]['aws_secret_access_key'] = key
                 awsCred[profile]['aws_access_key_id_main']  = access
-                awsCred[profile]['aws_session_access_key_main']     = key
+                awsCred[profile]['aws_secret_access_key_main']     = key
                 with open('%s/.aws/config' % home, 'w') as awsConfigfile:
                     awsConfig.write(awsConfigfile)
                 with open('%s/.aws/credentials' % home, 'w') as awsCredfile:

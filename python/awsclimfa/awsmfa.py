@@ -1,12 +1,8 @@
 import argparse
-from ast import If
 import configparser
 import json
 import os
-import string
 import sys
-from telnetlib import STATUS
-from urllib import response
 from urllib.parse import _DefragResultBase
 from os.path import expanduser
 
@@ -125,12 +121,14 @@ def renewMFA( profile="default"):
         
         # awsCred[profile]['aws_session_key_id_main']     = myjson['Credentials']['SessionToken']
         # awsCred[profile]['aws_session_access_key_main']     = myjson['Credentials']['SessionToken']
-        #awsCred[profile]['aws_access_key_id']     = myjson['Credentials']['AccessKeyId']
-        #awsCred[profile]['aws_secret_access_key'] = myjson['Credentials']['SecretAccessKey']
-        #awsCred[profile]['aws_session_token']     = myjson['Credentials']['SessionToken']
-        os.environ['AWS_ACCESS_KEY_ID'] = myjson['Credentials']['AccessKeyId']
-        os.environ['AWS_SECRET_ACCESS_KEY'] = myjson['Credentials']['SecretAccessKey']
-        os.environ['AWS_SESSION_TOKEN'] = myjson['Credentials']['SessionToken']
+        awsCred[profile]['aws_access_key_id']     = myjson['Credentials']['AccessKeyId']
+        awsCred[profile]['aws_secret_access_key'] = myjson['Credentials']['SecretAccessKey']
+        awsCred[profile]['aws_session_token']     = myjson['Credentials']['SessionToken']
+        with open('%s/.aws/credentials' % home, 'w') as awsCredfile:
+                awsCred.write(awsCredfile)
+        #os.environ['AWS_ACCESS_KEY_ID'] = myjson['Credentials']['AccessKeyId']
+        #os.environ['AWS_SECRET_ACCESS_KEY'] = myjson['Credentials']['SecretAccessKey']
+        #os.environ['AWS_SESSION_TOKEN'] = myjson['Credentials']['SessionToken']
 
 def main():
   

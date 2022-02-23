@@ -3,7 +3,6 @@ import configparser
 import json
 import os
 import sys
-from urllib.parse import _DefragResultBase
 from os.path import expanduser
 
 mfa=" "
@@ -11,49 +10,43 @@ awsConfig = configparser.ConfigParser()
 awsCred   = configparser.ConfigParser()
 home = expanduser("~")
 
-def newConfig(profile):
-    newProfile = ""
-    while newProfile  != 'y' and newProfile  != 'n':
-            newProfile = str(input("would you like to create new profile y/n: "))
-            newProfile  = newProfile.lower()
-        
-    if (newProfile == "y"):
-        configList= ('mfa_serial','region','output')
-        credList = ('aws_access_key_id','aws_secret_access_key')
+def newConfig(profile, newProfile):
+    configList= ('mfa_serial','region','output')
+    credList = ('aws_access_key_id','aws_secret_access_key')   
+    if (newProfile == "1"):
         awsConfig.add_section("profile " + profile)
         awsCred.add_section(profile)
-        for item in configList:
-            try:
-                value = awsConfig["profile " + profile][item]
-                print("Found exiting "+ item +" ...")
-                print("Existing value: %s" % awsConfig["profile " + profile][item])
-            except:
-                try:
-                    awsConfig["profile " + profile][item] = input("New "+ item +" : ")
-                except ValueError:
-                    exit("Enter valid arn value")
-        
+    for item in configList:
+        try:
+            value = awsConfig["profile " + profile][item]
+            print("Found exiting "+ item +" ...")
+            print("Existing value: %s" % awsConfig["profile " + profile][item])
+        except:
+            pass
+        try:
+            awsConfig["profile " + profile][item] = input("New "+ item +" : ")
+        except ValueError:
+            exit("Enter valid arn value")
 
-        for item in credList:
-            try:
-                value = awsConfig[profile][item]
-                print("Found exiting "+ item +" ...")
-                print("Existing value: %s" % awsCred[profile][item])
-            except:
-                try:
-                    awsCred[profile][item] = input("New "+ item +" : ")
-                except ValueError:
-                    exit("Enter valid arn value")
 
-        with open('%s/.aws/config' % home, 'w') as awsConfigfile:
-            awsConfig.write(awsConfigfile)
-        with open('%s/.aws/credentials' % home, 'w') as awsCredfile:
-            awsCred.write(awsCredfile)
-        return 0
-    else:
-        print("exit")
-        exit()
-    print("exit")
+    for item in credList:
+        try:
+            value = awsCred[profile][item]
+            print("Found exiting "+ item +" ...")
+            print("Existing value: %s" % awsCred[profile][item])
+        except:
+            pass
+        try:
+            awsCred[profile][item] = input("New "+ item +" : ")
+        except ValueError:
+            exit("Enter valid arn value")
+
+    with open('%s/.aws/config' % home, 'w') as awsConfigfile:
+        awsConfig.write(awsConfigfile)
+    with open('%s/.aws/credentials' % home, 'w') as awsCredfile:
+        awsCred.write(awsCredfile)
+    return 0
+    print("Done")
     exit()
     
 
@@ -74,18 +67,16 @@ def getConfig(profile):
         print("No such profile \"%s\" in config." % profile)
         return 0
 
-    
-
-
 def configureMFA(profile="default"):
      
     if ( getConfig(profile) == 1):
         print("Updating exiting profile")
+        newConfig(profile, newProfile = 0)
+    else:
+        newConfig(profile, newProfile = 1)
     
-    newConfig(profile)
     
-        
-
+    
 def renewMFA( profile="default"):
     if( getConfig(profile) == 1):
         
@@ -118,9 +109,7 @@ def renewMFA( profile="default"):
         except json.decoder.JSONDecodeError:
             exit("AWS was not happy with that one, if this you first time using check if AWS ACCESS key and SECRET key are corretly. \n Try Create new cofig with 'python awsmfa.py -n <profile>'.")
 
-        
-        # awsCred[profile]['aws_session_key_id_main']     = myjson['Credentials']['SessionToken']
-        # awsCred[profile]['aws_session_access_key_main']     = myjson['Credentials']['SessionToken']
+
         awsCred[profile]['aws_access_key_id']     = myjson['Credentials']['AccessKeyId']
         awsCred[profile]['aws_secret_access_key'] = myjson['Credentials']['SecretAccessKey']
         awsCred[profile]['aws_session_token']     = myjson['Credentials']['SessionToken']

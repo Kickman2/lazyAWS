@@ -1,9 +1,12 @@
 import argparse
+from ast import If
 import configparser
 import json
 import os
 import string
 import sys
+from telnetlib import STATUS
+from urllib import response
 from urllib.parse import _DefragResultBase
 from os.path import expanduser
 
@@ -12,83 +15,97 @@ awsConfig = configparser.ConfigParser()
 awsCred   = configparser.ConfigParser()
 home = expanduser("~")
 
-def getconfig(profile):
+def newConfig(profile):
+    newProfile = ""
+    while newProfile  != 'y' and newProfile  != 'n':
+            newProfile = str(input("would you like to create new profile y/n: "))
+            newProfile  = newProfile.lower()
+        
+    if (newProfile == "y"):
+        configList= ('mfa_serial','region','output')
+        credList = ('aws_access_key_id','aws_secret_access_key')
+        awsConfig.add_section("profile " + profile)
+        awsCred.add_section(profile)
+        for item in configList:
+            try:
+                value = awsConfig["profile " + profile][item]
+                print("Found exiting "+ item +" ...")
+                print("Existing value: %s" % awsConfig["profile " + profile][item])
+            except:
+                try:
+                    awsConfig["profile " + profile][item] = input("New "+ item +" : ")
+                except ValueError:
+                    exit("Enter valid arn value")
+        
+
+        for item in credList:
+            try:
+                value = awsConfig[profile][item]
+                print("Found exiting "+ item +" ...")
+                print("Existing value: %s" % awsCred[profile][item])
+            except:
+                try:
+                    awsCred[profile][item] = input("New "+ item +" : ")
+                except ValueError:
+                    exit("Enter valid arn value")
+
+        with open('%s/.aws/config' % home, 'w') as awsConfigfile:
+            awsConfig.write(awsConfigfile)
+        with open('%s/.aws/credentials' % home, 'w') as awsCredfile:
+            awsCred.write(awsCredfile)
+        return 0
+    else:
+        print("exit")
+        exit()
+    print("exit")
+    exit()
+    
+
+def getConfig(profile):
     print("Searching the profile...")
     awsConfig.read("%s/.aws/config" % home)
     awsCred.read('%s/.aws/credentials' % home)
     
     # print(awsConfig)
     #search mfa profile in config
-    try:
-        mfa = str(awsConfig["profile " + profile]['mfa_serial'])
-        print("Found exiting mfa arn...")
-        print("Existing mfa arn: %s" % mfa)
+    profiles = set( awsCred.sections())
+    configprofiles = set( awsConfig.sections())   
+    
+    if( profile in profiles and "profile " + profile in configprofiles):
+        print("Found the %s profile" % profile)
         return 1
-    except KeyError:
-        profiles = set( awsCred.sections())
-        configprofiles = set( awsConfig.sections())
-        if( profile in profiles and "profile " + profile in configprofiles):
-            print("Updating %s profile" % profile)
-            return 1
-        else:
-            print("No such profile \"%s\" in config." % profile)
-            newProfile = ""
-            while newProfile  != 'y' and newProfile  != 'n':
-                newProfile = str(input("would you like to create new profile y/n: "))
-                newProfile  = newProfile.lower()
-            if (newProfile == "y"):
-                print(newProfile)
-                try:
-                    mfaARN = input("New mfa arn: ")
-                    access = input("AWS ACCESS KEY: ")
-                    key = input("AWS SECRET: ")
-                    region = input("Default AWS Region: ")
-                    output = input("Default Output style: ")
-                except ValueError:
-                    exit("Enter valid arn value")
-                
-                awsConfig.add_section("profile " + profile)
-                awsCred.add_section(profile)
-                awsConfig["profile " + profile]['mfa_serial'] = mfaARN
-                #awsConfig["profile " + profile]['source_profile'] = profile
-                awsConfig["profile " + profile]['region'] = region
-                awsConfig["profile " + profile]['output'] = output
-                awsCred[profile]['aws_access_key_id'] = access
-                awsCred[profile]['aws_secret_access_key'] = key
-                awsCred[profile]['aws_access_key_id_main']  = access
-                awsCred[profile]['aws_secret_access_key_main']     = key
-                with open('%s/.aws/config' % home, 'w') as awsConfigfile:
-                    awsConfig.write(awsConfigfile)
-                with open('%s/.aws/credentials' % home, 'w') as awsCredfile:
-                    awsCred.write(awsCredfile)
-                return 0
-            else:
-                print("exit")
-                exit()
-        print("exit")
-        exit()
+    else:       
+        print("No such profile \"%s\" in config." % profile)
+        return 0
+
+    
+
 
 def configureMFA(profile="default"):
-    print("Creating new mfa")
-    if(getconfig(profile) == 1):
-        try:
-            mfaARN = str(input("New mfa arn: "))
-            awsConfig["profile " + profile]['mfa_serial'] = mfaARN
-            with open('%s/.aws/config' % home, 'w') as awsConfigfile:
-                awsConfig.write(awsConfigfile)
-        except ValueError:
-            exit("Enter valid arn value")
-    else:
-        exit()
+     
+    if ( getConfig(profile) == 1):
+        print("Updating exiting profile")
+    
+    newConfig(profile)
     
         
 
-def renewMFA(profile="default"):
-    if(getconfig(profile)):
+def renewMFA( profile="default"):
+    if( getConfig(profile) == 1):
+        
         print("Renewing mfa...")
         
-        awsCred[profile]['aws_access_key_id'] = awsCred[profile]['aws_access_key_id_main']
-        awsCred[profile]['aws_secret_access_key'] = awsCred[profile]['aws_secret_access_key_main'] 
+        try:
+            mainkey = awsCred[profile]['aws_access_key_id_main']
+            mainsecret = awsCred[profile]['aws_secret_access_key_main']
+            awsCred[profile]['aws_access_key_id'] = awsCred[profile]['aws_access_key_id_main']
+            awsCred[profile]['aws_secret_access_key'] = awsCred[profile]['aws_secret_access_key_main'] 
+        except:
+            awsCred[profile]['aws_access_key_id_main'] = awsCred[profile]['aws_access_key_id']
+            awsCred[profile]['aws_secret_access_key_main'] = awsCred[profile]['aws_secret_access_key']
+            with open('%s/.aws/credentials' % home, 'w') as awsCredfile:
+                awsCred.write(awsCredfile)
+               
 
         with open('%s/.aws/credentials' % home, 'w') as awsCredfile:
             awsCred.write(awsCredfile)
@@ -103,20 +120,17 @@ def renewMFA(profile="default"):
         try:
             myjson = json.loads(response)
         except json.decoder.JSONDecodeError:
-            exit("AWS was not happy with that one")
+            exit("AWS was not happy with that one, if this you first time using check if AWS ACCESS key and SECRET key are corretly. \n Try Create new cofig with 'python awsmfa.py -n <profile>'.")
+
         
         # awsCred[profile]['aws_session_key_id_main']     = myjson['Credentials']['SessionToken']
         # awsCred[profile]['aws_session_access_key_main']     = myjson['Credentials']['SessionToken']
-        awsCred[profile]['aws_access_key_id']     = myjson['Credentials']['AccessKeyId']
-        awsCred[profile]['aws_secret_access_key'] = myjson['Credentials']['SecretAccessKey']
-        awsCred[profile]['aws_session_token']     = myjson['Credentials']['SessionToken']
-        
-
-        with open('%s/.aws/credentials' % home, 'w') as awsCredfile:
-            awsCred.write(awsCredfile)
-        # os.environ['AWS_ACCESS_KEY_ID'] = myjson['Credentials']['AccessKeyId']
-        # os.environ['AWS_SECRET_ACCESS_KEY'] = myjson['Credentials']['SecretAccessKey']
-        # os.environ['AWS_SESSION_TOKEN'] = myjson['Credentials']['SessionToken']
+        #awsCred[profile]['aws_access_key_id']     = myjson['Credentials']['AccessKeyId']
+        #awsCred[profile]['aws_secret_access_key'] = myjson['Credentials']['SecretAccessKey']
+        #awsCred[profile]['aws_session_token']     = myjson['Credentials']['SessionToken']
+        os.environ['AWS_ACCESS_KEY_ID'] = myjson['Credentials']['AccessKeyId']
+        os.environ['AWS_SECRET_ACCESS_KEY'] = myjson['Credentials']['SecretAccessKey']
+        os.environ['AWS_SESSION_TOKEN'] = myjson['Credentials']['SessionToken']
 
 def main():
   
